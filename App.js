@@ -1,5 +1,7 @@
+// IM/2021/037
+
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
 
 export default function App() {
   const [display, setDisplay] = useState('0');
@@ -8,6 +10,7 @@ export default function App() {
   const [lastActionEqual, setLastActionEqual] = useState(false); // Track if '=' was pressed
 
   const handlePress = (value) => {
+    console.log('Button pressed:', value);
     setError(null); // Reset any error
 
     if (value === 'C') {
@@ -17,15 +20,20 @@ export default function App() {
       return;
     }
 
+    if (display === 'Error' && !isNaN(value)) {
+      setDisplay(value);
+      setInput(value);
+      setLastActionEqual(false);
+      return;
+    }
+
     if (value === '=') {
       try {
         const sanitizedInput = input.replace(/[^0-9+\-*/.%√]/g, '');
-        if (sanitizedInput.includes('/0')) {
-          setDisplay('Error');
-          setInput('');
-          return;
+        let result = eval(sanitizedInput);
+        if (result.toString().length > 20){
+          result = result.toExponential(6); // Convert to scientific notation
         }
-        const result = eval(sanitizedInput); // Evaluate safely
         setDisplay(result.toString());
         setInput(result.toString());
         setLastActionEqual(true); // Mark '=' as last action
@@ -49,7 +57,7 @@ export default function App() {
       const newInput = input.slice(0, -1); // Remove last character
       setInput(newInput);
       setDisplay(newInput || '0'); // Show '0' if no input
-      setLastActionEqual(false); // Reset the flag
+      setLastActionEqual(false); 
       return;
     }
 
@@ -72,6 +80,7 @@ export default function App() {
         if (input === ''){
           setDisplay('error');
           setError('Invalid input');
+          setLastActionEqual(true);
           return;
         }
         const result = Math.sqrt(eval(input)); // Compute square root
@@ -94,19 +103,35 @@ export default function App() {
       return;
     }
 
-    if (input === '' && ['+', '-', '*', '/'].includes(value)) return; // Prevent starting with operator
+    if (['+', '*', '/'].includes(value)) {
+      if (input === '' || ['+', '*', '/'].includes(input.slice(-1))) {
+        return;
+      }
+    }
 
     setInput((prev) => (prev === '0' ? value : prev + value));
     setDisplay((prev) => (prev === '0' ? value : prev + value));
-    setLastActionEqual(false); // Reset the flag
+    setLastActionEqual(false);  
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.screenContainer}>
-        <Text style={styles.screen} numberOfLines={1} ellipsizeMode="tail">
+        <ScrollView
+        horizontal
+        contentContainerStyle={styles.scrollContainer}
+        showsHorizontalScrollIndicator={false}
+        >
+        <Text style={[styles.screen,
+          {
+            fontSize: display.length > 10 ? 30 : 40,
+            textAlign: 'left',
+          },
+        ]}
+         numberOfLines={1} ellipsizeMode="tail">
           {display}
         </Text>
+        </ScrollView>
         {error && <Text style={styles.error}>{error}</Text>}
       </View>
       <View style={styles.buttonContainer}>
@@ -166,10 +191,16 @@ const styles = StyleSheet.create({
     margin: 10,
     justifyContent: 'center',
   },
+  scrollContainer: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+  },
   screen: {
     fontSize: 40,
     color: 'black',
     textAlign: 'right',
+    flexShrink: 1, // shrinking
   },
   error: {
     color: 'black',
